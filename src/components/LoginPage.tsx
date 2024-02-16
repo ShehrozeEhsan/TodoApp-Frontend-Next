@@ -46,7 +46,7 @@ const LoginPage = () => {
     setIsRequestLoading(true);
     try {
       const response: AxiosResponse = await axios.post(
-        "http://192.168.100.35:3000/user/login",
+        "http://localhost:3000/user/login",
         { username, password },
         { timeout: 5000 }
       );

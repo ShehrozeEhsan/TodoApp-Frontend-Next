@@ -110,7 +110,7 @@ const HomePage = () => {
   const handleEdit = async () => {
     try {
       const response: AxiosResponse = await axios.patch(
-        "http://192.168.100.35:3000/todo/edit/" + editingTodoId,
+        "http://localhost:3000/todo/edit/" + editingTodoId,
         { content },
         { timeout: 5000 }
       );
@@ -127,7 +127,7 @@ const HomePage = () => {
     try {
       const userId: string | null = localStorage.getItem("userId");
       const response: AxiosResponse = await axios.post(
-        "http://192.168.100.35:3000/todo/create-todo",
+        "http://localhost:3000/todo/create-todo",
         { userId, content },
         { timeout: 5000 }
       );
@@ -161,9 +161,11 @@ const HomePage = () => {
 
   const fetchData = async () => {
     setIsRequestLoading(true);
+    setCompletedTodos([]);
+    setInCompleteTodos([]);
     try {
       const response = await axios.get<Todo[]>(
-        `http://192.168.100.35:3000/todo/get-all-pending/${localStorage.getItem(
+        `http://localhost:3000/todo/get-all-pending/${localStorage.getItem(
           "userId"
         )}`
       );
@@ -187,7 +189,7 @@ const HomePage = () => {
 
     try {
       const response = await axios.get<Todo[]>(
-        `http://192.168.100.35:3000/todo/get-all-completed/${localStorage.getItem(
+        `http://localhost:3000/todo/get-all-completed/${localStorage.getItem(
           "userId"
         )}`
       );
@@ -215,7 +217,7 @@ const HomePage = () => {
   const changeStatusDone = async (todoId: number) => {
     try {
       const response: AxiosResponse = await axios.patch(
-        "http://192.168.100.35:3000/todo/update-status/" + todoId,
+        "http://localhost:3000/todo/update-status/" + todoId,
         { timeout: 5000 }
       );
     } catch (error: any) {
@@ -228,7 +230,7 @@ const HomePage = () => {
   const changeStatusPending = async (todoId: number) => {
     try {
       const response: AxiosResponse = await axios.patch(
-        "http://192.168.100.35:3000/todo/update-status-to-pending/" + todoId,
+        "http://localhost:3000/todo/update-status-to-pending/" + todoId,
         { timeout: 5000 }
       );
     } catch (error: any) {
@@ -241,7 +243,7 @@ const HomePage = () => {
   const deleteTodo = async (todoId: number) => {
     try {
       const response: AxiosResponse = await axios.delete(
-        "http://192.168.100.35:3000/todo/delete/" + todoId,
+        "http://localhost:3000/todo/delete/" + todoId,
         { timeout: 5000 }
       );
     } catch (error: any) {
