@@ -31,6 +31,7 @@ import {
 } from "@mui/material";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
+import TablePagination from "@mui/material/TablePagination";
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
@@ -76,6 +77,18 @@ const HomePage = () => {
   const [editingTodoId, setEditingTodoId] = useState(-1);
   const [editingSuccess, setEditingSuccess] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [totalPendingTodos, setTotalPendingTodos] = useState(25);
+
+  const [page, setPage] = React.useState(0);
+  const [rowsPerPage, setRowsPerPage] = React.useState(10);
+
+  const [pageCompleted, setPageCompleted] = React.useState(0);
+  const [rowsPerPageCompleted, setRowsPerPageCompleted] = React.useState(10);
+
+  const startIndex = pageCompleted * rowsPerPageCompleted;
+  const endIndex = startIndex + rowsPerPageCompleted;
+
+  const todosForPage = completedTodos.slice(startIndex, endIndex);
 
   const handleOpen = () => {
     setOpen(true);
@@ -112,7 +125,12 @@ const HomePage = () => {
       const response: AxiosResponse = await axios.patch(
         "http://localhost:3000/todo/edit/" + editingTodoId,
         { content },
-        { timeout: 5000 }
+        {
+          timeout: 5000,
+          headers: {
+            Authorization: token,
+          },
+        }
       );
       setEditingSuccess(true);
     } catch (error: any) {
@@ -125,13 +143,22 @@ const HomePage = () => {
 
   const handleSave = async () => {
     try {
-      const userId: string | null = localStorage.getItem("userId");
       const response: AxiosResponse = await axios.post(
         "http://localhost:3000/todo/create-todo",
-        { userId, content },
-        { timeout: 5000 }
+        { content },
+        {
+          timeout: 5000,
+          headers: {
+            Authorization: token,
+          },
+        }
       );
-      setSuccess(true);
+      if (response.data.status != 201) {
+        console.log(response.data.message);
+        setGenericError(true);
+      } else {
+        setSuccess(true);
+      }
     } catch (error: any) {
       console.log(error);
       setGenericError(true);
@@ -148,31 +175,43 @@ const HomePage = () => {
     setContent(event.target.value);
   };
 
+  const [token, setToken] = useState("");
+
   useEffect(() => {
-    const fullName: string | null = localStorage.getItem("fullName");
-    const userId: string | null = localStorage.getItem("userId");
-    if (fullName != null && userId != null) {
+    const token = localStorage.getItem("token");
+    if (token != null) {
       setIsLoggedIn(true);
+      setToken(token);
     } else {
       router.push("/login");
     }
-    fetchData();
   }, []);
+
+  useEffect(() => {
+    // This effect will run whenever token changes
+    if (token) {
+      fetchData();
+    }
+  }, [token,rowsPerPage,page]);
 
   const fetchData = async () => {
     setIsRequestLoading(true);
     setCompletedTodos([]);
     setInCompleteTodos([]);
     try {
-      const response = await axios.get<Todo[]>(
-        `http://localhost:3000/todo/get-all-pending/${localStorage.getItem(
-          "userId"
-        )}`
+      // Fix the hardcoded 2 later
+      const response = await axios.get(
+        `http://localhost:3000/todo/get-all-pending?limit=`+rowsPerPage+`&offset=`+page,
+        {
+          headers: {
+            Authorization: token,
+          },
+        }
       );
-      if (response.status != 204) {
-        const mappedTodos: Todo[] = response.data.map(
+      if (response.data.status == 200) {
+        const mappedTodos: Todo[] = response.data.data.map(
           (todo: Todo, index: number) => ({
-            index: index + 1,
+            index: todo.todoId,
             todoId: todo.todoId,
             content: todo.content,
             createdAt: new Date(todo.createdAt),
@@ -181,20 +220,30 @@ const HomePage = () => {
           })
         );
         setInCompleteTodos(mappedTodos);
+      } else if (response.data.statusCode == 401) {
+        localStorage.clear();
+        router.push("/login");
       }
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      throw error;
+    } catch (error: any) {
+      if (error.response.data.statusCode == 401) {
+        localStorage.clear();
+        await router.push("/login");
+      } else {
+        console.error("Error fetching data:", error);
+      }
     }
 
     try {
-      const response = await axios.get<Todo[]>(
-        `http://localhost:3000/todo/get-all-completed/${localStorage.getItem(
-          "userId"
-        )}`
+      const response = await axios.get(
+        `http://localhost:3000/todo/get-all-completed`,
+        {
+          headers: {
+            Authorization: token,
+          },
+        }
       );
-      if (response.status != 204) {
-        const mappedTodos: Todo[] = response.data.map(
+      if (response.data.status == 200) {
+        const mappedTodos: Todo[] = response.data.data.map(
           (todo: Todo, index: number) => ({
             index: index + 1,
             todoId: todo.todoId,
@@ -206,9 +255,29 @@ const HomePage = () => {
         );
         setCompletedTodos(mappedTodos);
       }
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      throw error;
+    } catch (error: any) {
+      if (error.response.data.statusCode == 401) {
+        localStorage.clear();
+        await router.push("/login");
+      } else {
+        console.error("Error fetching data:", error);
+      }
+    }
+
+    try {
+      const response = await axios.get(
+        `http://localhost:3000/todo/get-all-pending-count`,
+        {
+          headers: {
+            Authorization: token,
+          },
+        }
+      );
+      if (response.data.status == 200) {
+        setTotalPendingTodos(response.data.data);
+      }
+    } catch (error: any) {
+        console.error("Error fetching data:", error);
     }
 
     setIsRequestLoading(false);
@@ -216,9 +285,15 @@ const HomePage = () => {
 
   const changeStatusDone = async (todoId: number) => {
     try {
+      console.log(token);
       const response: AxiosResponse = await axios.patch(
         "http://localhost:3000/todo/update-status/" + todoId,
-        { timeout: 5000 }
+        {},
+        {
+          headers: {
+            Authorization: token,
+          },
+        }
       );
     } catch (error: any) {
       console.log(error);
@@ -231,7 +306,13 @@ const HomePage = () => {
     try {
       const response: AxiosResponse = await axios.patch(
         "http://localhost:3000/todo/update-status-to-pending/" + todoId,
-        { timeout: 5000 }
+        {},
+        {
+          timeout: 5000,
+          headers: {
+            Authorization: token,
+          },
+        }
       );
     } catch (error: any) {
       console.log(error);
@@ -244,7 +325,12 @@ const HomePage = () => {
     try {
       const response: AxiosResponse = await axios.delete(
         "http://localhost:3000/todo/delete/" + todoId,
-        { timeout: 5000 }
+        {
+          headers: {
+            Authorization: token,
+          },
+          timeout: 5000,
+        }
       );
     } catch (error: any) {
       console.log(error);
@@ -253,6 +339,33 @@ const HomePage = () => {
     fetchData();
   };
 
+  const handleChangePage = (
+    event: React.MouseEvent<HTMLButtonElement> | null,
+    newPage: number
+  ) => {
+    setPage(newPage);
+  };
+
+  const handleChangePageCompleted = (
+    event: React.MouseEvent<HTMLButtonElement> | null,
+    newPage: number
+  ) => {
+    setPageCompleted(newPage);
+  };
+
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const handleChangeRowsPerPageCompleted = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setRowsPerPageCompleted(parseInt(event.target.value, 10));
+    setPageCompleted(0);
+  };
   return (
     <>
       {isLoggedIn ? (
@@ -370,6 +483,14 @@ const HomePage = () => {
                           ))}
                         </TableBody>
                       </Table>
+                      <TablePagination
+                        component="div"
+                        count={totalPendingTodos}
+                        page={page}
+                        onPageChange={handleChangePage}
+                        rowsPerPage={rowsPerPage}
+                        onRowsPerPageChange={handleChangeRowsPerPage}
+                      />
                     </TableContainer>
                   </Card>
                 </Grid>
@@ -412,7 +533,7 @@ const HomePage = () => {
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {completedTodos.map((row) => (
+                          {todosForPage.map((row) => (
                             <StyledTableRow key={row.todoId}>
                               <StyledTableCell component="th" scope="row">
                                 {row.index}
@@ -455,6 +576,14 @@ const HomePage = () => {
                           ))}
                         </TableBody>
                       </Table>
+                      <TablePagination
+                        component="div"
+                        count={completedTodos.length}
+                        page={pageCompleted}
+                        onPageChange={handleChangePageCompleted}
+                        rowsPerPage={rowsPerPageCompleted}
+                        onRowsPerPageChange={handleChangeRowsPerPageCompleted}
+                      />
                     </TableContainer>
                   </Card>
                 </Grid>

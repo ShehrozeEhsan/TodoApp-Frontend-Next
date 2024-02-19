@@ -46,26 +46,14 @@ const LoginPage = () => {
     setIsRequestLoading(true);
     try {
       const response: AxiosResponse = await axios.post(
-        "http://localhost:3000/user/login",
+        "http://localhost:3000/auth/login",
         { username, password },
         { timeout: 5000 }
       );
-      localStorage.setItem("fullName", response.data.fullName);
-      localStorage.setItem("userId", response.data.userId);
+      localStorage.setItem("token", "Bearer " + response.data.access_token);
       await router.push("/homepage");
     } catch (error: any) {
-      console.log(error);
-      if (error.response != null){
-        if (error.response.status == 401) {
-          setAuthenticationError(true);
-        } else if (error.response.status == 404) {
-          setUserNotFoundError(true);
-        } else {
-          setGenericError(true);
-        } 
-      } else {
-        setGenericError(true);
-      }
+      setAuthenticationError(true);
     } finally {
       setIsRequestLoading(false);
     }
@@ -179,7 +167,7 @@ const LoginPage = () => {
           variant="filled"
           sx={{ width: "100%" }}
         >
-          Wrong Password.
+          Wrong Username or Password.
         </Alert>
       </Snackbar>
       <Snackbar

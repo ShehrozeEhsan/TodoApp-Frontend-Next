@@ -8,20 +8,12 @@ import { useRouter } from "next/router";
 
 const TopNavBar = () => {
   const router = useRouter();
-  const [fullName, setFullName] = useState("");
+  
 
   const handleLogout = () => {
     localStorage.clear();
     router.push("/login");
   };
-
-  useEffect(() => {
-    const fullName: string | null = localStorage.getItem("fullName");
-    const userId: string | null = localStorage.getItem("userId");
-    if (fullName != null && userId != null) {
-      setFullName(fullName);
-    }
-  }, []);
 
   return (
     
@@ -42,7 +34,7 @@ const TopNavBar = () => {
                   textAlign: "center",
                 }}
               >
-                Welcome, {fullName}
+                Welcome
               </Typography>
             </Grid>
             <Grid item sm={0} md={3} lg={3}></Grid>
