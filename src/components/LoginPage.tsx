@@ -50,8 +50,13 @@ const LoginPage = () => {
         { username, password },
         { timeout: 5000 }
       );
-      localStorage.setItem("token", "Bearer " + response.data.access_token);
-      await router.push("/homepage");
+      if (response.data.success == true){
+        localStorage.setItem("token", "Bearer " + response.data.data);
+        await router.push("/homepage");
+      } else {
+        setAuthenticationError(true);
+      }
+      
     } catch (error: any) {
       setAuthenticationError(true);
     } finally {

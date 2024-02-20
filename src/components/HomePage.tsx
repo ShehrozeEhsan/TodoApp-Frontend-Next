@@ -446,7 +446,7 @@ const HomePage = () => {
                           <TableRow>
                             <StyledTableCell width="10%">Index</StyledTableCell>
                             <StyledTableCell width="50%">
-                              Content
+                              Task Description
                             </StyledTableCell>
                             <StyledTableCell align="center" width="10%">
                               Status
@@ -539,7 +539,7 @@ const HomePage = () => {
                           <TableRow>
                             <StyledTableCell width="10%">Index</StyledTableCell>
                             <StyledTableCell width="50%">
-                              Content
+                              Task Description
                             </StyledTableCell>
                             <StyledTableCell align="center" width="10%">
                               Status
