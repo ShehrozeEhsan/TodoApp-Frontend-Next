@@ -78,10 +78,10 @@ const HomePage = () => {
   const [editingSuccess, setEditingSuccess] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [totalPendingTodos, setTotalPendingTodos] = useState(25);
-
+  const [authorizationError,setAutorizationError] = useState(false);
+  const [deletionSuccess,setDeleteSuccess] = useState(false);
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
-
   const [pageCompleted, setPageCompleted] = React.useState(0);
   const [rowsPerPageCompleted, setRowsPerPageCompleted] = React.useState(10);
 
@@ -111,6 +111,8 @@ const HomePage = () => {
     setGenericError(false);
     setSuccess(false);
     setEditingSuccess(false);
+    setAutorizationError(false);
+    setDeleteSuccess(false);
   };
 
   const handleClose = () => {
@@ -209,9 +211,10 @@ const HomePage = () => {
         }
       );
       if (response.data.status == 200) {
+        const startCount = rowsPerPage * page;
         const mappedTodos: Todo[] = response.data.data.map(
           (todo: Todo, index: number) => ({
-            index: todo.todoId,
+            index: startCount + index + 1,
             todoId: todo.todoId,
             content: todo.content,
             createdAt: new Date(todo.createdAt),
@@ -332,9 +335,22 @@ const HomePage = () => {
           timeout: 5000,
         }
       );
+      if(response.data.success == true){
+          setDeleteSuccess(true);
+      } else {
+        if (response.data.status == 403){
+          setAutorizationError(true);
+        } else {
+          setGenericError(true);
+        }
+      }
     } catch (error: any) {
       console.log(error);
-      setGenericError(true);
+      if (error.response.request.status == 403){
+        setAutorizationError(true);
+      } else {
+        setGenericError(true);
+      }
     }
     fetchData();
   };
@@ -396,7 +412,7 @@ const HomePage = () => {
                       overflow: "hidden",
                     }}
                   >
-                    <Grid container sx={{ margin: "1%" }}>
+                    <Grid container sx={{ padding: "1%" }}>
                       <Grid item xs={4} sm={0} md={0} lg={0}></Grid>
                       <Grid item xs={4} sm={11} md={11} lg={11}>
                         <Typography
@@ -404,6 +420,7 @@ const HomePage = () => {
                           component="h2"
                           sx={{
                             textAlign: "center",
+                            marginLeft: "9%"
                           }}
                         >
                           Todo
@@ -657,6 +674,20 @@ const HomePage = () => {
                 </Alert>
               </Snackbar>
               <Snackbar
+                open={authorizationError}
+                autoHideDuration={6000}
+                onClose={handleAlertClose}
+              >
+                <Alert
+                  onClose={handleAlertClose}
+                  severity="error"
+                  variant="filled"
+                  sx={{ width: "100%" }}
+                >
+                  You are not authorized for this action.
+                </Alert>
+              </Snackbar>
+              <Snackbar
                 open={success}
                 autoHideDuration={6000}
                 onClose={handleAlertClose}
@@ -668,6 +699,20 @@ const HomePage = () => {
                   sx={{ width: "100%" }}
                 >
                   Successfully added new task
+                </Alert>
+              </Snackbar>
+              <Snackbar
+                open={deletionSuccess}
+                autoHideDuration={6000}
+                onClose={handleAlertClose}
+              >
+                <Alert
+                  onClose={handleAlertClose}
+                  severity="success"
+                  variant="filled"
+                  sx={{ width: "100%" }}
+                >
+                  Successfully deleted task
                 </Alert>
               </Snackbar>
               <Snackbar
